@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "bootstrap-vue": "^2.23.1",
+    "mailersend": "^2.2.0",
+    "mongodb": "^7.0.0",
+    "vue": "^3.4.27"
+  }
+}
