@@ -301,7 +301,12 @@ export default {
         },
         cardNumber: this.cardNumber,
         conditions: this.selectedConditions.map(condition => condition._id),
-        contactPreference: "email"
+        contactPreference: "email",
+        HIDRisk : {
+          heartRate : "N/A",
+          averageMovement : "N/A",
+          overallRisk: "N/A"
+        }
       };
 
       if (this.patientFirstName !== '' && this.lastName !== '' && this.dateOfBirth !== '' && this.sex !== '' && this.address !== '' && this.phoneNum !== '' && this.email !== '' && this.emergencyContactName !== '' && this.emergencyContactRelationship !== '' && this.emergencyContactPhone !== '' && this.cardNumber !== '') {

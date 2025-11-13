@@ -46,25 +46,22 @@
         <div class="columns">
           <div class="column">
             <p class="title has-text-centered"></p>
-            <table class="table is-fullwidth" v-if="appointments && appointments.length > 0">
+            <table class="table is-fullwidth">
               <thead>
                 <tr>
-                  <th></th>
-                  <th class="has-text-centered is-size-5">Heart Rate</th>
-                  <th class="has-text-centered is-size-5">Mobility</th>
+                  <th class="has-text-centered is-size-5">Average Heart Rate</th>
+                  <th class="has-text-centered is-size-5">Average Mobility</th>
                   <th class="has-text-centered is-size-5">Estimated HID Risk</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="appointment in appointments" :key="appointment._id">
-                  <td><button class="button is-danger is-small" @click="deleteAppointment(appointment._id)">X</button></td>
-                  <td class="has-text-centered">{{ appointment.notes }}</td>
-                  <td class="has-text-centered">{{ appointment.date }}</td>
-                  <td class="has-text-centered">{{ appointment.startTime }}</td>
+                <tr>
+                  <td class="has-text-centered">{{ patient.HIDRisk[0]?.heartRate }}</td>
+                  <td class="has-text-centered">{{ patient.HIDRisk[0]?.averageMovement }}</td>
+                  <td class="has-text-centered">{{ patient.HIDRisk[0]?.overallRisk }}</td>
                 </tr>
               </tbody>
             </table>
-            <p v-else class="section subtitle is-fullwidth has-text-centered">There is no data for {{ patient.firstName + " " + patient.lastName }} currently.</p>
             <div class="has-text-centered" v-if="token">
               <button class="button is-warning is-size-5 mt-3" @click="inputForm(true)">Input Risk Factors Manually?</button>
             </div>
@@ -80,24 +77,34 @@
             
           </div>
           <div class="columns has-text-centered">
-            <div class></div>
-           <div class="field">
-              <label class="label">Heart Rate</label>
-                <div class="control">
-                  <input class="input" type="date" v-model="manualHID.heartRate">
+            <div class="column">
+              <div class="field">
+                  <label class="label">Heart Rate</label>
+                    <div class="control">
+                      <input class="input" type="string" v-model="manualHID.heartRate">
+                    </div>
                 </div>
             </div>
-            <div class="field">
-              <label class="label">Average Motion</label>
-                <div class="control">
-                  <input class="input" type="date" v-model="manualHID.averageMotion">
-                </div>
+            <div class="column">
+              <div class="field">
+                <label class="label">Average Motion</label>
+                  <div class="control">
+                    <input class="input" type="string" v-model="manualHID.averageMotion">
+                  </div>
+              </div>
             </div>
-            <div class="field">
-              <label class="label">Risk Factor</label>
-                <div class="control">
-                  <input class="input" type="date" v-model="manualHID.riskFactor">
-                </div>
+            <div class="column">
+              <div class="field">
+                <label class="label">Risk Factor</label>
+                  <div class="control">
+                    <input class="input" type="string" v-model="manualHID.riskFactor">
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="columns has-text-centered">
+            <div class="column">
+              <button class="button is-danger is-size-5 mt-3" @click="inputInformation">Submit HID Factors</button>
             </div>
           </div>
         </form>
@@ -143,8 +150,29 @@ export default {
     goBack() {
       this.$router.push("/patients");
     },
-    inputInformation() {
-      this.$router.push("/dashboard")
+    async inputInformation(event) {
+      event.preventDefault(); 
+
+      try {
+        
+        console.log("Sending HID data:", this.manualHID);
+
+        const response = await axios.put(`${API_URL}/patients/${this.$route.params.patient}`, {
+          HIDRisk: {
+            heartRate: this.manualHID.heartRate,
+            averageMovement: this.manualHID.averageMotion,
+            overallRisk: this.manualHID.riskFactor
+          }
+        });
+
+        console.log("Updated patient HID factors:", response.data);
+
+      
+        this.inputOpen = false;
+        await this.fetchPatient();
+      } catch (error) {
+        console.error("Failed to update HID factors:", error);
+      }
     },
     inputForm(open) {
       this.inputOpen = open;
