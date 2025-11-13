@@ -64,9 +64,9 @@
                 </tr>
               </tbody>
             </table>
-            <p v-else class="section subtitle is-fullwidth has-text-centered">There are no appointments for {{ patient.firstName + " " + patient.lastName }} currently.</p>
+            <p v-else class="section subtitle is-fullwidth has-text-centered">There are no data for {{ patient.firstName + " " + patient.lastName }} currently.</p>
             <div class="has-text-centered" v-if="token">
-              <button class="button is-warning is-size-5 mt-3" @click="sendToAppointmentPage()">Input Risk Factors Manually?</button>
+              <button class="button is-warning is-size-5 mt-3" @click="inputInformation()">Input Risk Factors Manually?</button>
             </div>
           </div>
         </div>
@@ -106,6 +106,9 @@ export default {
     goBack() {
       this.$router.push("/patients");
     },
+    inputInformation() {
+      this.$router.push("/dashboard")
+    }
 
   },
   created() {
