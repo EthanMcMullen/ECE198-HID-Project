@@ -44,49 +44,50 @@ const patientSchema = new Schema({
     contactPreference: {
         type: String
     },
-    treatments: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Medicine',
-        required: false
-    }]
+    HIDRisk: [{
+        heartRate: String,
+        averageMovement: String,
+        overallRisk: String
+    }],
+    
 });
 
-const medicineSchema = new mongoose.Schema({
-    condition: {
-        type: String,
-        required: true,
-    },
-    name: {
-        type: String,
-        required: true,
-    },
-    dosage: {
-        type: String,
-        required: true,
-    },
-    frequency: {
-        type: String,
-        required: true,
-    },
-    route: {
-        type: String,
-        required: true,
-    },
-    startDate: {
-        type: String,
-    },
-    endDate: {
-        type: String,
-    },
-    prescribingPhysician: {
-        type: String,
-    },
-    notes: {
-        type: String,
-    },
-});
-
-const Medicine = mongoose.model("Medicine", medicineSchema);
+// const medicineSchema = new mongoose.Schema({
+    // condition: {
+        // type: String,
+        // required: true,
+    // },
+    // name: {
+        // type: String,
+        // required: true,
+    // },
+    // dosage: {
+        // type: String,
+        // required: true,
+    // },
+    // frequency: {
+        // type: String,
+        // required: true,
+    // },
+    // route: {
+        // type: String,
+        // required: true,
+    // },
+    // startDate: {
+        // type: String,
+    // },
+    // endDate: {
+        // type: String,
+    // },
+    // prescribingPhysician: {
+        // type: String,
+    // },
+    // notes: {
+        // type: String,
+    // },
+// });
+// 
+// const Medicine = mongoose.model("Medicine", medicineSchema);
 const Patient = mongoose.model("Patient", patientSchema);
 
-module.exports = { Patient, Medicine };
+module.exports = Patient;

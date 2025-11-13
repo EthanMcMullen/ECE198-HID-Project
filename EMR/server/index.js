@@ -4,12 +4,12 @@ const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const nodemailer = require('nodemailer');
-const cron = require('node-cron');
+//const nodemailer = require('nodemailer');
+//const cron = require('node-cron');
 require('./db');
 
-const { Patient, Medicine } = require("./models/Patient");
-const Appointment = require("./models/Appointment");
+const Patient = require("./models/Patient");
+//const Appointment = require("./models/Appointment");
 //const Medicine = require('./models/Condition');
 
 const UserRouter = require("./routes/user.js");
@@ -54,7 +54,7 @@ app.get("/patients", async (req, res, next) => {
 app.get("/patients/:id", async (req, res, next) => {
     try {
         const patient = await Patient.findById(req.params.id)
-        .populate("treatments");
+        //.populate("treatments");
         if (!patient) {
             return res.status(404).send({ message: "Patient not found" });
         }
@@ -155,105 +155,105 @@ app.delete("/patients/:id", async (req, res, next) => {
 // });
 
 // Add an appointment
-app.post("/appointments", async (req, res) => {
-    
-    try {
-
-        let a = req.body.patientDeats
-        let fn = a.substring(0, a.indexOf(" "));
-        let ln = a.substring(a.indexOf(" ") +1, a.indexOf(",") )
-        let cn = a.substring(a.lastIndexOf(" ") + 1);
-        let patient = await Patient.findOne({firstName: fn, lastName: ln, cardNumber: cn})
-        let appointment = new Appointment({
-            patient: patient,
-            date: req.body.date, 
-            startTime: req.body.startTime, 
-            endTime: req.body.endTime, 
-            notes: req.body.notes
-        });
-        console.log(appointment)
-        await appointment.save();
-        res.send(appointment);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-       
-    }
-});
-
+// app.post("/appointments", async (req, res) => {
+    // 
+    // try {
+// 
+        // let a = req.body.patientDeats
+        // let fn = a.substring(0, a.indexOf(" "));
+        // let ln = a.substring(a.indexOf(" ") +1, a.indexOf(",") )
+        // let cn = a.substring(a.lastIndexOf(" ") + 1);
+        // let patient = await Patient.findOne({firstName: fn, lastName: ln, cardNumber: cn})
+        // let appointment = new Appointment({
+            // patient: patient,
+            // date: req.body.date, 
+            // startTime: req.body.startTime, 
+            // endTime: req.body.endTime, 
+            // notes: req.body.notes
+        // });
+        // console.log(appointment)
+        // await appointment.save();
+        // res.send(appointment);
+    // } catch (error) {
+        // res.status(500).send({ message: error.message });
+    //    
+    // }
+// });
+// 
 // Gets all appointments
-app.get('/calendar/appointments', async (req, res) => {
-    try {
-        const appointments = await Appointment.find({ date: req.query.date });
-        res.status(200).send(appointments);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
-
-app.get('/appointments', async (req, res) => {
-    try {
-        const appointments = await Appointment.find();
-        res.status(200).send(appointments)
-    } catch (error) {
-        res.status(500).send({ message : error.message})
-    }
-})
-
+// app.get('/calendar/appointments', async (req, res) => {
+    // try {
+        // const appointments = await Appointment.find({ date: req.query.date });
+        // res.status(200).send(appointments);
+    // } catch (error) {
+        // res.status(500).send({ message: error.message });
+    // }
+// });
+// 
+// app.get('/appointments', async (req, res) => {
+    // try {
+        // const appointments = await Appointment.find();
+        // res.status(200).send(appointments)
+    // } catch (error) {
+        // res.status(500).send({ message : error.message})
+    // }
+// })
+// 
 // Get a single appointment by id
-app.get("/appointments/:id", async (req, res) => {
-    try {
-        const appointment = await Appointment.findById(req.params.id);
-        if (!appointment) {
-            return res.status(404).send({ message: "Appointment not found" });
-        }
-        res.status(200).send(appointment);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
-
+// app.get("/appointments/:id", async (req, res) => {
+    // try {
+        // const appointment = await Appointment.findById(req.params.id);
+        // if (!appointment) {
+            // return res.status(404).send({ message: "Appointment not found" });
+        // }
+        // res.status(200).send(appointment);
+    // } catch (error) {
+        // res.status(500).send({ message: error.message });
+    // }
+// });
+// 
 // Update an appointment by id
-app.put("/appointments/:id", async (req, res) => {
-    try {
-        const updatedAppointment = await Appointment.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!updatedAppointment) {
-            return res.status(404).send({ message: "Appointment not found" });
-        }
-        res.status(200).send(updatedAppointment);
-    } catch (error) {
-        res.status(400).send({ message: error.message });
-    }
-});
-
+// app.put("/appointments/:id", async (req, res) => {
+    // try {
+        // const updatedAppointment = await Appointment.findByIdAndUpdate(
+            // req.params.id,
+            // req.body,
+            // { new: true, runValidators: true }
+        // );
+        // if (!updatedAppointment) {
+            // return res.status(404).send({ message: "Appointment not found" });
+        // }
+        // res.status(200).send(updatedAppointment);
+    // } catch (error) {
+        // res.status(400).send({ message: error.message });
+    // }
+// });
+// 
 // Remove an appointment by id
-app.delete("/appointments/:id", async (req, res) => {
-    try {
-        const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
-        if (!deletedAppointment) {
-            return res.status(404).send({ message: "Appointment not found" });
-        }
-        res.status(200).send(deletedAppointment);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
-
+// app.delete("/appointments/:id", async (req, res) => {
+    // try {
+        // const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
+        // if (!deletedAppointment) {
+            // return res.status(404).send({ message: "Appointment not found" });
+        // }
+        // res.status(200).send(deletedAppointment);
+    // } catch (error) {
+        // res.status(500).send({ message: error.message });
+    // }
+// });
+// 
 // delete an appointment 
-app.delete("/appointments/patient/:patientId", async (req, res) => {
-    try {
-        const result = await Appointment.deleteMany({ patient: req.params.patientId });
-        if (result.deletedCount === 0) {
-            return res.status(404).send({ message: "No appointments found for this patient to delete" });
-        }
-        res.status(200).send({ message: "Appointments deleted successfully" });
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
+// app.delete("/appointments/patient/:patientId", async (req, res) => {
+    // try {
+        // const result = await Appointment.deleteMany({ patient: req.params.patientId });
+        // if (result.deletedCount === 0) {
+            // return res.status(404).send({ message: "No appointments found for this patient to delete" });
+        // }
+        // res.status(200).send({ message: "Appointments deleted successfully" });
+    // } catch (error) {
+        // res.status(500).send({ message: error.message });
+    // }
+// });
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
@@ -268,68 +268,68 @@ app.listen(port, () => {
 });
 
 // Create a new treatment
-app.post("/treatments", async (req, res) => {
-    try {
-        const newTreatment = new Medicine(req.body);
-        await newTreatment.save();
-        res.status(201).send(newTreatment);
-    } catch (error) {
-        res.status(400).send({ message: error.message });
-    }
-});
+// app.post("/treatments", async (req, res) => {
+//     try {
+//         const newTreatment = new Medicine(req.body);
+//         await newTreatment.save();
+//         res.status(201).send(newTreatment);
+//     } catch (error) {
+//         res.status(400).send({ message: error.message });
+//     }
+// });
 
-// Get all treatments
-app.get("/treatments", async (req, res) => {
-    try {
-        const treatments = await Medicine.find();
-        res.status(200).send(treatments);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
+// // Get all treatments
+// app.get("/treatments", async (req, res) => {
+//     try {
+//         const treatments = await Medicine.find();
+//         res.status(200).send(treatments);
+//     } catch (error) {
+//         res.status(500).send({ message: error.message });
+//     }
+// });
 
-// Get treatment by ID
-app.get("/treatments/:id", async (req, res) => {
-    try {
-        const treatment = await Medicine.findById(req.params.id);
-        if (!treatment) {
-            return res.status(404).send({ message: "Treatment not found" });
-        }
-        res.status(200).send(treatment);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
+// // Get treatment by ID
+// app.get("/treatments/:id", async (req, res) => {
+//     try {
+//         const treatment = await Medicine.findById(req.params.id);
+//         if (!treatment) {
+//             return res.status(404).send({ message: "Treatment not found" });
+//         }
+//         res.status(200).send(treatment);
+//     } catch (error) {
+//         res.status(500).send({ message: error.message });
+//     }
+// });
 
-// Update a treatment by ID
-app.put("/treatments/:id", async (req, res) => {
-    try {
-        const updatedTreatment = await Medicine.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!updatedTreatment) {
-            return res.status(404).send({ message: "Treatment not found" });
-        }
-        res.status(200).send(updatedTreatment);
-    } catch (error) {
-        res.status(400).send({ message: error.message });
-    }
-});
+// // Update a treatment by ID
+// app.put("/treatments/:id", async (req, res) => {
+//     try {
+//         const updatedTreatment = await Medicine.findByIdAndUpdate(
+//             req.params.id,
+//             req.body,
+//             { new: true, runValidators: true }
+//         );
+//         if (!updatedTreatment) {
+//             return res.status(404).send({ message: "Treatment not found" });
+//         }
+//         res.status(200).send(updatedTreatment);
+//     } catch (error) {
+//         res.status(400).send({ message: error.message });
+//     }
+// });
 
-// Delete a treatment by ID
-app.delete("/treatments/:id", async (req, res) => {
-    try {
-        const deletedTreatment = await Medicine.findByIdAndDelete(req.params.id);
-        if (!deletedTreatment) {
-            return res.status(404).send({ message: "Treatment not found" });
-        }
-        res.status(200).send(deletedTreatment);
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
+// // Delete a treatment by ID
+// app.delete("/treatments/:id", async (req, res) => {
+//     try {
+//         const deletedTreatment = await Medicine.findByIdAndDelete(req.params.id);
+//         if (!deletedTreatment) {
+//             return res.status(404).send({ message: "Treatment not found" });
+//         }
+//         res.status(200).send(deletedTreatment);
+//     } catch (error) {
+//         res.status(500).send({ message: error.message });
+//     }
+// });
 
 // twillio notifications
 
@@ -361,69 +361,69 @@ app.delete("/treatments/:id", async (req, res) => {
 
 //node mailer and node cron
 
-let transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+// let transporter = nodemailer.createTransport({
+//     service: 'gmail',
+//     auth: {
+//         user: process.env.EMAIL_USER,
+//         pass: process.env.EMAIL_PASS
+//     }
+// });
 
-async function sendEmail(to, subject, text) {
-    let mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: to,
-        subject: subject,
-        text: text
-    }
+// async function sendEmail(to, subject, text) {
+//     let mailOptions = {
+//         from: process.env.EMAIL_USER,
+//         to: to,
+//         subject: subject,
+//         text: text
+//     }
 
-    transporter.sendMail(mailOptions, function(error, info) {
-        if(error)
-            console.log('error occured with sending email', error.message)
-        else {
-            console.log('email sent successfully', info.response)
-        }
-    })
-}
+//     transporter.sendMail(mailOptions, function(error, info) {
+//         if(error)
+//             console.log('error occured with sending email', error.message)
+//         else {
+//             console.log('email sent successfully', info.response)
+//         }
+//     })
+// }
 
-app.post('/send-email', async (req, res) => {
-    const { to, subject, text } = req.body
-    console.log(process.env.EMAIL_USER, process.env.EMAIL_PASS)
-    try {
-        await sendEmail(to, subject, text)
-        res.status(200).send({ message: 'Email sent successfully!' })
-    } catch (e) {
-        res.status(500).send({ message: e.message })
-    }
-})
+// app.post('/send-email', async (req, res) => {
+//     const { to, subject, text } = req.body
+//     console.log(process.env.EMAIL_USER, process.env.EMAIL_PASS)
+//     try {
+//         await sendEmail(to, subject, text)
+//         res.status(200).send({ message: 'Email sent successfully!' })
+//     } catch (e) {
+//         res.status(500).send({ message: e.message })
+//     }
+// })
 
-cron.schedule('0 3 * * *', async () => { // runs at 3 am every day
-    try {
-        let date = (new Date()).toLocaleDateString()
-        const appointments = await Appointment.find({ date: date });
+// cron.schedule('0 3 * * *', async () => { // runs at 3 am every day
+//     try {
+//         let date = (new Date()).toLocaleDateString()
+//         const appointments = await Appointment.find({ date: date });
 
-        let mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: '',
-            subject: 'Appointment Reminder!',
-            text: 'Your Appointment is scheduled for today.\nRegards,\nEMR Team'
-        }
+//         let mailOptions = {
+//             from: process.env.EMAIL_USER,
+//             to: '',
+//             subject: 'Appointment Reminder!',
+//             text: 'Your Appointment is scheduled for today.\nRegards,\nEMR Team'
+//         }
 
-        appointments.forEach(async a => {
-            mailOptions.to = a.patient.contact.email
+//         appointments.forEach(async a => {
+//             mailOptions.to = a.patient.contact.email
 
-            transporter.sendMail(mailOptions, function(error, info){
-                if (error) {
-                    console.log('Error occurred: ' + error.message);
-                } else {
-                    console.log('Email sent successfully: ' + info.response);
-                }
-            });
-        })
-    } catch(e) {
-        console.error(e)
-    }
-}, {
-    scheduled: true,
-    timezone: "America/New_York" // Set the desired timezone
-});
+//             transporter.sendMail(mailOptions, function(error, info){
+//                 if (error) {
+//                     console.log('Error occurred: ' + error.message);
+//                 } else {
+//                     console.log('Email sent successfully: ' + info.response);
+//                 }
+//             });
+//         })
+//     } catch(e) {
+//         console.error(e)
+//     }
+// }, {
+//     scheduled: true,
+//     timezone: "America/New_York" // Set the desired timezone
+// });

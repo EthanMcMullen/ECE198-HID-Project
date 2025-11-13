@@ -1,8 +1,7 @@
 <template>
   <section class="section">
-    <p class="title">Add New Treatment</p>
+    <p class="title">Add Risk Factors</p>
     <div id="all" class="box m-5" v-if="patient">
-      <div id="treatment-list">
         <div class="columns">
           <div class="column">
             <div class="field">
@@ -48,7 +47,6 @@
             </li>
           </ul>
         </nav>
-      </div>
       <hr>
       <p v-if="selectedDrug">Selected drug: {{ selectedDrug.brand_name }}</p>
       <form @submit.prevent="addTreatment">

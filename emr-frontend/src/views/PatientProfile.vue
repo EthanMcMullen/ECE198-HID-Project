@@ -40,7 +40,7 @@
     </div>
 
 
-    <div class="box my-4" v-if="appointments && appointments.length > 0 || token" style="margin: 20px">
+    <div class="box my-4" style="margin: 20px">
       <div class="">
             <p class="title has-text-centered">Hospital Induced Delerium Risk Factors</p>
         <div class="columns">
@@ -64,12 +64,43 @@
                 </tr>
               </tbody>
             </table>
-            <p v-else class="section subtitle is-fullwidth has-text-centered">There are no data for {{ patient.firstName + " " + patient.lastName }} currently.</p>
+            <p v-else class="section subtitle is-fullwidth has-text-centered">There is no data for {{ patient.firstName + " " + patient.lastName }} currently.</p>
             <div class="has-text-centered" v-if="token">
-              <button class="button is-warning is-size-5 mt-3" @click="inputInformation()">Input Risk Factors Manually?</button>
+              <button class="button is-warning is-size-5 mt-3" @click="inputForm(true)">Input Risk Factors Manually?</button>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="overlay" v-if="inputOpen">
+      <div class="box">
+        <form>
+          <div class="has-text-centered">
+            
+          </div>
+          <div class="columns has-text-centered">
+            <div class></div>
+           <div class="field">
+              <label class="label">Heart Rate</label>
+                <div class="control">
+                  <input class="input" type="date" v-model="manualHID.heartRate">
+                </div>
+            </div>
+            <div class="field">
+              <label class="label">Average Motion</label>
+                <div class="control">
+                  <input class="input" type="date" v-model="manualHID.averageMotion">
+                </div>
+            </div>
+            <div class="field">
+              <label class="label">Risk Factor</label>
+                <div class="control">
+                  <input class="input" type="date" v-model="manualHID.riskFactor">
+                </div>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -89,8 +120,14 @@ export default {
     return {
       patient: null,
       windowOpen: false,
-      contactOpen: false,
+      inputOpen: false,
       token: null,
+      HIDFactors: [],
+      manualHID: {
+        heartRate: "",
+        averageMotion: "",
+        riskFactor: "",
+      }
     };
   },
   methods: {
@@ -108,6 +145,9 @@ export default {
     },
     inputInformation() {
       this.$router.push("/dashboard")
+    },
+    inputForm(open) {
+      this.inputOpen = open;
     }
 
   },
