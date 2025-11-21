@@ -70,6 +70,23 @@
       </div>
     </div>
 
+    <div class="box my-4" style="margin: 20px">
+      <p class="title has-text-centered">Heart Rate Over Time</p>
+      <div class="chart-container" style="position: relative; height: 300px;">
+        <LineChartHeartRate v-if="sensorData.length" :chart-data="heartRateChartData" :chart-options="heartRateChartOptions" />
+        <p v-else class="has-text-centered">No heart rate data available.</p>
+      </div>
+    </div>
+
+    <div class="box my-4" style="margin: 20px">
+      <p class="title has-text-centered">Mobility Over Time</p>
+      <div class="chart-container" style="position: relative; height: 300px;">
+        <LineChartMobility v-if="sensorData.length" :chart-data="mobilityChartData" :chart-options="mobilityChartOptions" />
+        <p v-else class="has-text-centered">No mobility data available.</p>
+      </div>
+    </div>
+
+
     <div class="overlay" v-if="inputOpen">
       <div class="box">
         <form>
@@ -102,6 +119,8 @@
               </div>
             </div>
           </div>
+          
+
           <div class="columns has-text-centered">
             <div class="column">
               <button class="button is-danger is-size-5 mt-3" @click="inputInformation">Submit HID Factors</button>
@@ -117,6 +136,31 @@
 
 <script>
 import axios from "axios";
+import { h } from 'vue';
+import { Chart } from 'chart.js';
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale
+} from 'chart.js';
+
+import { Line } from 'vue-chartjs';
+
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale
+);
+
 
 const API_URL = 'http://localhost:3000';
 
@@ -125,6 +169,49 @@ export default {
   name: "PatientProfile",
   data() {
     return {
+      heartRateChartData: {
+      labels: [],
+      datasets: [
+        {
+          label: "Heart Rate (bpm)",
+          backgroundColor: "rgba(255, 99, 132, 0.2)",
+          borderColor: "rgba(255, 99, 132, 1)",
+          pointBackgroundColor: "rgba(255, 99, 132, 1)",
+          data: []
+        }
+      ]
+    },
+    heartRateChartOptions: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: "Time" } },
+        y: { title: { display: true, text: "Heart Rate (bpm)" }, beginAtZero: true }
+      }
+    },
+
+    mobilityChartData: {
+      labels: [],
+      datasets: [
+        {
+          label: "Average Mobility (%)",
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          pointBackgroundColor: "rgba(54, 162, 235, 1)",
+          data: []
+        }
+      ]
+    },
+    mobilityChartOptions: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: "Time" } },
+        y: { title: { display: true, text: "Average Mobility (%)" }, beginAtZero: true }
+      }
+    },
+
+      sensorData: [],
       patient: null,
       windowOpen: false,
       inputOpen: false,
@@ -146,6 +233,65 @@ export default {
       } catch (error) {
         console.error("Failed to fetch patient data:", error);
       }
+    },
+    async fetchData() {
+      try {
+        const response = await axios.get(`${API_URL}/patients/${this.$route.params.patient}/data`);
+        this.sensorData = response.data.data || response.data; // depends on backend response
+        console.log("Sensor data:", this.sensorData);
+
+        // Populate heart rate chart
+        this.heartRateChartData.labels = this.sensorData.map(d => {
+          const date = new Date(d.timestamp);
+          return date.getHours() + ":" + String(date.getMinutes()).padStart(2, "0");
+        });
+
+        this.heartRateChartData.datasets[0].data = this.sensorData.map(d => d.avgHeartRate);
+
+        // After building heartRateChartData
+        this.mobilityChartData = {
+          labels: this.sensorData.map(d => new Date(d.timestamp).toLocaleTimeString()),
+          datasets: [
+            {
+              label: "Average Mobility (%)",
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              pointBackgroundColor: "rgba(54, 162, 235, 1)",
+              data: this.sensorData.map(d => Number(d.motionPercent)) // or avgMotion if you rename
+            }
+          ]
+        };
+
+
+        // (Optional) populate motion chart if you want a second chart
+        //this.motionChartData.labels = this.sensorData.map(d =>
+        //  new Date(d.timestamp).toLocaleTimeString()
+        //);
+        //this.motionChartData.datasets[0].data = this.sensorData.map(d => d.avgMotion);
+
+      } catch (error) {
+        console.error("Failed to fetch sensor data:", error);
+      }
+
+      console.log("sensorData", this.sensorData);
+
+            // Sort by time (optional, but keeps the chart in order)
+      this.sensorData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      // Rebuild the chart data completely
+      this.heartRateChartData = {
+        labels: this.sensorData.map(d => new Date(d.timestamp).toLocaleTimeString()),
+        datasets: [
+          {
+            label: "Heart Rate (bpm)",
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            pointBackgroundColor: "rgba(255, 99, 132, 1)",
+            data: this.sensorData.map(d => Number(d.avgHeartRate)) // make sure it's a number
+          }
+        ]
+      };
+
     },
     goBack() {
       this.$router.push("/patients");
@@ -182,7 +328,68 @@ export default {
   created() {
     this.token = localStorage.getItem("token");
     this.fetchPatient();
+    this.fetchData();
   },
+  components: {
+    LineChartHeartRate: {
+      props: ["chartData", "chartOptions"],
+      render() {
+        return h('canvas', { ref: 'canvas' });
+      },
+      mounted() {
+        this.chartInstance = new Chart(this.$refs.canvas.getContext("2d"), {
+          type: "line",
+          data: this.chartData,
+          options: this.chartOptions
+        });
+      },
+      watch: {
+        chartData: {
+          deep: true,
+          handler(newData) {
+            if (this.chartInstance) this.chartInstance.destroy();
+            this.chartInstance = new Chart(this.$refs.canvas.getContext("2d"), {
+              type: "line",
+              data: newData,
+              options: this.chartOptions
+            });
+          }
+        }
+      }
+    },
+
+
+    LineChartMobility: {
+      props: ["chartData", "chartOptions"],
+      render() {
+        return h('canvas', { ref: 'canvas' });
+      },
+      mounted() {
+        this.chartInstance = new Chart(this.$refs.canvas.getContext("2d"), {
+          type: "line",
+          data: this.chartData,
+          options: this.chartOptions
+        });
+      },
+      watch: {
+        chartData: {
+          deep: true,
+          handler(newData) {
+            if (this.chartInstance) this.chartInstance.destroy();
+            this.chartInstance = new Chart(this.$refs.canvas.getContext("2d"), {
+              type: "line",
+              data: newData,
+              options: this.chartOptions
+            });
+          }
+        }
+      }
+    }
+
+    
+  }
+
+
 };
 </script>
 

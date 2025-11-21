@@ -9,6 +9,7 @@ const dotenv = require("dotenv");
 require('./db');
 
 const Patient = require("./models/Patient");
+const PatientData = require("./models/PatientData.js")
 //const Appointment = require("./models/Appointment");
 //const Medicine = require('./models/Condition');
 
@@ -76,6 +77,59 @@ app.put("/patients/:id", async (req, res, next) => {
         next(error);
     }
 });
+
+app.post("/patients/:id/data", async (req, res, next) => {
+  try {
+    const patientId = req.params.id;
+    const { avgHeartRate, motionPercent, timestamp } = req.body;
+
+    // Validate required fields
+    if (avgHeartRate === undefined || motionPercent === undefined || !timestamp) {
+      return res.status(400).send({
+        message: "avgHeartRate, motionPercent, and timestamp are required"
+      });
+    }
+
+    // Check patient exists
+    const patientExists = await Patient.findById(patientId);
+    if (!patientExists) {
+      return res.status(404).send({ message: "Patient not found" });
+    }
+
+    // Save new packet
+    const packet = new PatientData({
+      patientId,
+      avgHeartRate,
+      motionPercent,
+      timestamp: new Date(timestamp)
+    });
+
+    await packet.save();
+
+    res.status(201).send({
+      message: "Sensor data stored successfully",
+      data: packet
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+
+app.get("/patients/:id/data", async (req, res) => {
+    try {
+        const patientId = req.params.id;
+
+        const data = await PatientData.find({ patientId }).sort({ timestamp: -1 });
+
+        res.send({ data });
+    } catch (err) {
+        res.status(500).send({ error: "Server error" });
+    }
+});
+
+
 
 // Delete a patient by ID
 app.delete("/patients/:id", async (req, res, next) => {
