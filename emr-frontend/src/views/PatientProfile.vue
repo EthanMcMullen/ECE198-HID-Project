@@ -262,13 +262,6 @@ export default {
           ]
         };
 
-
-        // (Optional) populate motion chart if you want a second chart
-        //this.motionChartData.labels = this.sensorData.map(d =>
-        //  new Date(d.timestamp).toLocaleTimeString()
-        //);
-        //this.motionChartData.datasets[0].data = this.sensorData.map(d => d.avgMotion);
-
       } catch (error) {
         console.error("Failed to fetch sensor data:", error);
       }
