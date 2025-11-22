@@ -50,6 +50,7 @@ for (let time = startTime; time < endTime; time += intervalMs) {
   let motionPercent = Math.floor(Math.random() * 5);
   if (Math.random() < 0.1) motionPercent += Math.floor(Math.random() * 20); // brief agitation
 
+  motionPercent = 0
   sensorReadings.push({ timestamp, avgHeartRate, motionPercent });
 }
 

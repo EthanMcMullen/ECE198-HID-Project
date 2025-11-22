@@ -303,9 +303,9 @@ export default {
         conditions: this.selectedConditions.map(condition => condition._id),
         contactPreference: "email",
         HIDRisk : {
-          heartRate : "N/A",
-          averageMovement : "N/A",
-          overallRisk: "N/A"
+          heartRate : "No Data",
+          averageMovement : "No Data",
+          overallRisk: "No Data"
         }
       };
 

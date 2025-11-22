@@ -50,20 +50,24 @@
               <thead>
                 <tr>
                   <th class="has-text-centered is-size-5">Average Heart Rate</th>
+                  <th class="has-text-centered is-size-5">Recent Heart Rate</th>
                   <th class="has-text-centered is-size-5">Average Mobility</th>
+                  <th class="has-text-centered is-size-5">Recent Mobility</th>
                   <th class="has-text-centered is-size-5">Estimated HID Risk</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td class="has-text-centered">{{ patient.HIDRisk[0]?.heartRate }}</td>
+                  <td class="has-text-centered">{{ recentData.avgHeartRate }}</td>
                   <td class="has-text-centered">{{ patient.HIDRisk[0]?.averageMovement }}</td>
-                  <td class="has-text-centered">{{ patient.HIDRisk[0]?.overallRisk }}</td>
+                  <td class="has-text-centered">{{ recentData.motionPercent }}</td>
+                  <td class="has-text-centered">{{ patient.HIDRisk[0]?.overallRisk }}% {{ HIDmessage }}</td>
                 </tr>
               </tbody>
             </table>
             <div class="has-text-centered" v-if="token">
-              <button class="button is-warning is-size-5 mt-3" @click="inputForm(true)">Input Risk Factors Manually?</button>
+              <button class="button is-warning is-size-5 mt-3" @click="inputInformation()">Use Current Values as Baseline?</button>
             </div>
           </div>
         </div>
@@ -87,49 +91,7 @@
     </div>
 
 
-    <div class="overlay" v-if="inputOpen">
-      <div class="box">
-        <form>
-          <div class="has-text-centered">
-            
-          </div>
-          <div class="columns has-text-centered">
-            <div class="column">
-              <div class="field">
-                  <label class="label">Heart Rate</label>
-                    <div class="control">
-                      <input class="input" type="string" v-model="manualHID.heartRate">
-                    </div>
-                </div>
-            </div>
-            <div class="column">
-              <div class="field">
-                <label class="label">Average Motion</label>
-                  <div class="control">
-                    <input class="input" type="string" v-model="manualHID.averageMotion">
-                  </div>
-              </div>
-            </div>
-            <div class="column">
-              <div class="field">
-                <label class="label">Risk Factor</label>
-                  <div class="control">
-                    <input class="input" type="string" v-model="manualHID.riskFactor">
-                  </div>
-              </div>
-            </div>
-          </div>
-          
-
-          <div class="columns has-text-centered">
-            <div class="column">
-              <button class="button is-danger is-size-5 mt-3" @click="inputInformation">Submit HID Factors</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+     </div>
     
     
 </template>
@@ -211,17 +173,24 @@ export default {
       }
     },
 
+    recentData: {
+      avgHeartRate: "",
+      motionPercent: "",
+      timestamp: "",
+    }, 
+
+    averageData: {
+      avgHeartRate: "",
+      motionPercent: "",
+    },
+
       sensorData: [],
       patient: null,
       windowOpen: false,
       inputOpen: false,
+      HIDmessage: "",
       token: null,
       HIDFactors: [],
-      manualHID: {
-        heartRate: "",
-        averageMotion: "",
-        riskFactor: "",
-      }
     };
   },
   methods: {
@@ -233,31 +202,72 @@ export default {
       } catch (error) {
         console.error("Failed to fetch patient data:", error);
       }
+      this.setHIDMessage();
     },
     async fetchData() {
       try {
         const response = await axios.get(`${API_URL}/patients/${this.$route.params.patient}/data`);
-        this.sensorData = response.data.data || response.data; // depends on backend response
-        console.log("Sensor data:", this.sensorData);
+        let rawData = response.data.data || response.data;
 
-        // Populate heart rate chart
-        this.heartRateChartData.labels = this.sensorData.map(d => {
-          const date = new Date(d.timestamp);
-          return date.getHours() + ":" + String(date.getMinutes()).padStart(2, "0");
-        });
+        console.log(rawData);
 
-        this.heartRateChartData.datasets[0].data = this.sensorData.map(d => d.avgHeartRate);
+        if (!rawData.length) return;
 
-        // After building heartRateChartData
+        const now = Date.now();
+
+        // Sort by timestamp and remove future data
+        this.sensorData = rawData
+          .map(d => ({ ...d, timestamp: new Date(d.timestamp.replace(/Z$/, "")) })) // convert timestamps to Date objects
+          .filter(d => d.timestamp.getTime() <= now) // only past/present data
+          .sort((a, b) => a.timestamp - b.timestamp); // sort ascending
+
+        // Set the most recent packet
+        const latest = this.sensorData[this.sensorData.length - 1];
+        if (latest) {
+          this.recentData = {
+            avgHeartRate: latest.avgHeartRate,
+            motionPercent: latest.motionPercent,
+            timestamp: latest.timestamp,
+          };
+        }
+
+        // Map chart data
+        const labels = this.sensorData.map(d =>
+          d.timestamp.toLocaleString([], {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        );
+
+        const heartRates = this.sensorData.map(d => Number(d.avgHeartRate));
+        const mobilities = this.sensorData.map(d => Number(d.motionPercent));
+
+        // Heart rate chart
+        this.heartRateChartData = {
+          labels,
+          datasets: [
+            {
+              label: "Heart Rate (bpm)",
+              backgroundColor: "rgba(255, 99, 132, 0.2)",
+              borderColor: "rgba(255, 99, 132, 1)",
+              pointBackgroundColor: "rgba(255, 99, 132, 1)",
+              data: heartRates
+            }
+          ]
+        };
+
+        // Mobility chart
         this.mobilityChartData = {
-          labels: this.sensorData.map(d => new Date(d.timestamp).toLocaleTimeString()),
+          labels,
           datasets: [
             {
               label: "Average Mobility (%)",
               backgroundColor: "rgba(54, 162, 235, 0.2)",
               borderColor: "rgba(54, 162, 235, 1)",
               pointBackgroundColor: "rgba(54, 162, 235, 1)",
-              data: this.sensorData.map(d => Number(d.motionPercent)) // or avgMotion if you rename
+              data: mobilities
             }
           ]
         };
@@ -265,56 +275,123 @@ export default {
       } catch (error) {
         console.error("Failed to fetch sensor data:", error);
       }
-
-      console.log("sensorData", this.sensorData);
-
-            // Sort by time (optional, but keeps the chart in order)
-      this.sensorData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-      // Rebuild the chart data completely
-      this.heartRateChartData = {
-        labels: this.sensorData.map(d => new Date(d.timestamp).toLocaleTimeString()),
-        datasets: [
-          {
-            label: "Heart Rate (bpm)",
-            backgroundColor: "rgba(255, 99, 132, 0.2)",
-            borderColor: "rgba(255, 99, 132, 1)",
-            pointBackgroundColor: "rgba(255, 99, 132, 1)",
-            data: this.sensorData.map(d => Number(d.avgHeartRate)) // make sure it's a number
-          }
-        ]
-      };
-
     },
+
+
+
     goBack() {
       this.$router.push("/patients");
     },
-    async inputInformation(event) {
-      event.preventDefault(); 
+    calculateHIDRisk() {
+      // 75+ Very high
+      // 50+ High
+      // 25+ Medium
+      // 0+ Low
+      // 0 None
 
+      // Heart Rate
+      let heartRateHIDComponent = 0
+      let heartRateRatio = this.averageData.avgHeartRate/this.patient.HIDRisk[0].heartRate
+      
+      let averageMovementHIDComponent = 0
+      
+
+      if(heartRateRatio < 1.065) {
+        heartRateHIDComponent = 0
+      } else if (heartRateRatio > 1.25) {
+        heartRateHIDComponent = 100
+      } else {
+        heartRateHIDComponent = (100)*((heartRateRatio-1.065)/(1.25-1.065))
+      }
+
+      if(this.averageData.motionPercent > 4) {
+        averageMovementHIDComponent = 0
+      } else {
+        averageMovementHIDComponent = (4 - this.averageData.motionPercent)*(25)
+      }
+
+      console.log(heartRateHIDComponent)
+      console.log(averageMovementHIDComponent)
+
+      this.patient.HIDRisk[0].overallRisk = Math.floor((0.25)*(heartRateHIDComponent) + (0.75)*(averageMovementHIDComponent))
+
+
+      // Excercise levels are significantly more
+
+      // 75% excercise
+      // Under 4 is concerning
+      // 100-4 is a 0
+     
+      // 0 is 100
+      // 
+      // 25% heart rate
+      // HIgher heart rate
+      // increase linearly
+      // 6.5% increase in heart rate is 0
+      // 25% increate in heart rate is 100
+    },
+
+    async inputInformation() {
       try {
-        
-        console.log("Sending HID data:", this.manualHID);
+        if (!this.sensorData.length) {
+          console.warn("No sensor data available to calculate averages.");
+          return;
+        }
+
+        // Calculate daily averages
+        let totalHeartRate = 0;
+        let totalMotion = 0;
+
+        for (let i = 0; i < this.sensorData.length; i++) {
+          totalHeartRate += Number(this.sensorData[i].avgHeartRate || 0);
+          totalMotion += Number(this.sensorData[i].motionPercent || 0);
+        }
+
+        const count = this.sensorData.length;
+       
+
+        this.averageData.avgHeartRate = (totalHeartRate / count).toFixed(2);
+        this.averageData.motionPercent = (totalMotion / count).toFixed(2);
+
+        console.log("Sending HID data based on daily averages:", {
+          heartRate: this.averageData.avgHeartRate,
+          averageMovement: this.averageData.motionPercent,
+        });
+
+        this.calculateHIDRisk();
 
         const response = await axios.put(`${API_URL}/patients/${this.$route.params.patient}`, {
           HIDRisk: {
-            heartRate: this.manualHID.heartRate,
-            averageMovement: this.manualHID.averageMotion,
-            overallRisk: this.manualHID.riskFactor
+            heartRate: this.averageData.avgHeartRate,
+            averageMovement: this.averageData.motionPercent,
+            overallRisk: this.patient.HIDRisk[0].overallRisk
           }
         });
 
         console.log("Updated patient HID factors:", response.data);
 
-      
+        this.setHIDMessage();
+
         this.inputOpen = false;
         await this.fetchPatient();
       } catch (error) {
         console.error("Failed to update HID factors:", error);
       }
     },
-    inputForm(open) {
-      this.inputOpen = open;
+    setHIDMessage() {
+      if(!this.patient.HIDRisk[0].overallRisk) {
+        this.HIDmessage = ""
+      } else if(this.patient.HIDRisk[0].overallRisk === 0) {
+        this.HIDmessage = "No Risk"
+      } else if(this.patient.HIDRisk[0].overallRisk < 25) {
+        this.HIDmessage = "Low Risk"
+      } else if(this.patient.HIDRisk[0].overallRisk < 50) {
+        this.HIDmessage = "Moderate Risk"
+      } else if(this.patient.HIDRisk[0].overallRisk < 75) {
+        this.HIDmessage = "High Risk"
+      } else {
+        this.HIDmessage = "Very High Risk"
+      }
     }
 
   },
