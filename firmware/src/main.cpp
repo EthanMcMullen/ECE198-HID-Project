@@ -51,8 +51,8 @@ const float ADC_RES = 4095.0;
 const float VREF = 3.3;
 
 // --- printing interval setup for vscode plotter
-unsigned long lastPrint = 0;
-const unsigned long printInterval = 100;  // 20 hz output
+unsigned long lastRead = 0;
+const unsigned long readInterval = 100;  // 20 hz output
 
 // ---------------------------------------
 // --- helper functions: 
@@ -96,7 +96,7 @@ void updateStandingState(float gx, float gy, float gz) {
 const int WINDOW_SIZE = 50;
 bool standingHistory[WINDOW_SIZE];
 int historyIndex = 0;
-int standingCount = 0;      // number of TRUE values in window
+int standingCount = 0;      // number of true values in window
 
 unsigned long lastSample = 0;
 const unsigned long SAMPLE_INTERVAL = 100; // ms (same as print interval)
@@ -135,7 +135,7 @@ float getStandingPercentage() {
 // timer for sending to backend
 unsigned long lastSend = 0;
 // const unsigned long SEND_INTERVAL = 5UL * 60UL * 1000UL; // 5 min
-const unsigned long SEND_INTERVAL =  5UL * 1000UL; // 5 min
+const unsigned long SEND_INTERVAL =  5UL * 1000UL; // 5 seconds
 
 // -- wifi setup
 const char* ssid = "Ethans phone";
@@ -147,7 +147,7 @@ void connectWiFi() {
     Serial.println("\n[WiFi] Connecting...");
 
     WiFi.mode(WIFI_STA);           // MUST be before anything else on ESP32-C3
-    WiFi.setHostname("esp32c3");   // Prevents stuck state on some hotspots
+    WiFi.setHostname("esp32c3_1");   // Prevents stuck state on some hotspots
 
     WiFi.disconnect();             // soft disconnect, NOT WiFi.disconnect(true)
     delay(200);
@@ -220,13 +220,11 @@ void sendStandingToBackend(float pct) {
     http.begin(endpoint);
     http.addHeader("Content-Type", "application/json");
 
-    // String body = String("{\"percent\":") + pct + "}";
-
     String jsonPayload = "{";
     jsonPayload += "\"patientId\":\"69164212a337ec14e57f5b1d\",";
-    jsonPayload += "\"avgHeartRate\":60,";
+    jsonPayload += "\"avgHeartRate\":-1,";
     jsonPayload += "\"motionPercent\":" + String(pct, 2) + ",";
-    jsonPayload += "\"timestamp\":\"" + getTimestampISO8601() + "\""; // placeholder timestamp
+    jsonPayload += "\"timestamp\":\"" + getTimestampISO8601() + "\"";
     jsonPayload += "}";
 
     Serial.println("Sending:");
@@ -250,10 +248,6 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  // i2c setup for esp32c3
-  // Wire.begin(8, 9);
-  // Wire.setClock(400000);
-
   // -- wifi setup
   connectWiFi();
 
@@ -267,24 +261,14 @@ void setup() {
       delay(500);
       Serial.print(".");
       nowSec = time(nullptr);
+      connectWiFi();
+      
   }
   Serial.println("\nTime synced!");
 
 
   //set adc resolution to 12 bits
   analogReadResolution(12);
-
-
-  // // check for sensor intialization
-  // while (!particleSensor.begin(Wire)) {
-  //   Serial.println("MAX30102 not found!");
-  //   delay(1000);
-  // }
-
-  // // Configure MAX30102 for heart rate
-  // particleSensor.setup();  // 69 Hz default setup
-  // particleSensor.setPulseAmplitudeRed(0x00); // Disable red LED
-  // particleSensor.setPulseAmplitudeIR(0x30);  // Modest IR power
 
   Serial.println("Sensors Initialized");
   delay(100);
@@ -298,66 +282,9 @@ void loop() {
   //print timing (only run through loop() at specified interval)
   unsigned long now = millis();
 
-  // if (now - lastIRsample >= IR_SAMPLE_INTERVAL_MS) {   // 100hz block
-  //     lastIRsample = now;
-
-
-  //   // --- heartbeat detection
-    
-  //   // clear pulse oximeter fifo (avoid fifo clogging)
-  //   if (particleSensor.available()) {
-  //     lastIRvalue = particleSensor.getIR();
-  //     particleSensor.nextSample();   // VERY IMPORTANT
-  //   }
-
-  //   // read pulse oximeter data
-  //   int IRvalue = particleSensor.getIR();
-
-  //   // reset if fifo is detecting freeze
-  //   static uint32_t zeroStart = millis();
-  //   if (lastIRvalue == 0) {
-
-  //     if (millis() - zeroStart > 1000) {
-  //       particleSensor.clearFIFO();  // emergency reset
-  //       zeroStart = millis();
-  //     }
-
-  //   } else {
-  //     zeroStart = millis();
-  //   }
-
-  //   if (checkForBeat(IRvalue)) {  
-  //   long nowBeat = millis();
-
-  //     if (lastBeat > 0) { 
-  //       long bt = nowBeat - lastBeat;
-
-  //       beatsPerMinute = 60.0 / (bt / 1000.0);
-
-  //       if (beatsPerMinute > 20 && beatsPerMinute < 250) {
-  //         rates[rateSpot++] = (byte)beatsPerMinute;
-  //         rateSpot %= RATE_SIZE;
-
-  //         int total = 0;
-  //         for (byte i = 0; i < RATE_SIZE; i++) total += rates[i];
-  //         beatAvg = total / RATE_SIZE;
-  //       }
-  //     }
-
-  //     lastBeat = nowBeat; 
-  //   }
-
-  //   // zero out heart rate if no activity for 3s
-  //   if (millis() - lastBeat > BPM_TIMEOUT_MS) {
-  //     beatsPerMinute = 0;
-  //     // beatAvg = 0;
-  //     for (byte i = 0; i < RATE_SIZE; i++) rates[i] = 0;
-  //   }
-  // }
-
-
-  if (now - lastPrint >= printInterval) {
-    lastPrint = now;
+  
+  if (now - lastRead >= readInterval) {
+    lastRead = now;
 
     // ----- Read Accelerometer -----
     int rawX = analogRead(pinX);
@@ -378,7 +305,7 @@ void loop() {
 
       float pct = getStandingPercentage();
 
-      sendStandingToBackend(pct);  // implement below
+      sendStandingToBackend(pct); 
     }
 
 
