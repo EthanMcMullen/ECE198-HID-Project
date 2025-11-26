@@ -74,21 +74,30 @@
       </div>
     </div>
 
-    <div class="box my-4" style="margin: 20px">
-      <p class="title has-text-centered">Heart Rate Over Time</p>
-      <div class="chart-container" style="position: relative; height: 300px;">
-        <LineChartHeartRate v-if="sensorData.length" :chart-data="heartRateChartData" :chart-options="heartRateChartOptions" />
-        <p v-else class="has-text-centered">No heart rate data available.</p>
-      </div>
+    <div class="chart-container" style="position: relative; height: 300px;">
+      <p class="title has-text-centered">Heart Rate</p>
+      <LineChartHeartRate 
+        v-if="heartRateChartData.datasets[0].data.length" 
+        :chart-data="heartRateChartData" 
+        :chart-options="heartRateChartOptions" 
+      />
+      <p v-else class="title has-text-centered">No heart rate data available.</p>
     </div>
 
-    <div class="box my-4" style="margin: 20px">
-      <p class="title has-text-centered">Mobility Over Time</p>
-      <div class="chart-container" style="position: relative; height: 300px;">
-        <LineChartMobility v-if="sensorData.length" :chart-data="mobilityChartData" :chart-options="mobilityChartOptions" />
-        <p v-else class="has-text-centered">No mobility data available.</p>
-      </div>
+    <div class="columns"></div>
+    <div class="columns"></div>
+    
+
+    <div class="chart-container" style="position: relative; height: 300px;">
+      <p class="title has-text-centered">Position</p>
+      <LineChartMobility 
+        v-if="mobilityChartData.datasets[0].data.length" 
+        :chart-data="mobilityChartData" 
+        :chart-options="mobilityChartOptions" 
+      />
+      <p v-else class="title has-text-centered">No mobility data available.</p>
     </div>
+
 
 
      </div>
@@ -209,68 +218,58 @@ export default {
         const response = await axios.get(`${API_URL}/patients/${this.$route.params.patient}/data`);
         let rawData = response.data.data || response.data;
 
-        console.log(rawData);
-
-        if (!rawData.length) return;
-
         const now = Date.now();
 
-        // Sort by timestamp and remove future data
-        this.sensorData = rawData
-          .map(d => ({ ...d, timestamp: new Date(d.timestamp.replace(/Z$/, "")) })) // convert timestamps to Date objects
-          .filter(d => d.timestamp.getTime() <= now) // only past/present data
-          .sort((a, b) => a.timestamp - b.timestamp); // sort ascending
+        const cleanedData = rawData
+          .map(d => ({ ...d, timestamp: new Date(d.timestamp.replace(/Z$/, "")) }))
+          .filter(d => d.timestamp.getTime() <= now)
+          .sort((a, b) => a.timestamp - b.timestamp);
 
-        // Set the most recent packet
-        const latest = this.sensorData[this.sensorData.length - 1];
-        if (latest) {
-          this.recentData = {
-            avgHeartRate: latest.avgHeartRate,
-            motionPercent: latest.motionPercent,
-            timestamp: latest.timestamp,
-          };
-        }
+        this.sensorData = cleanedData; 
 
-        // Map chart data
-        const labels = this.sensorData.map(d =>
-          d.timestamp.toLocaleString([], {
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        );
+        const heartRateData = cleanedData.filter(d => Number(d.avgHeartRate) >= 30);
+        const mobilityData  = cleanedData.filter(d => Number(d.motionPercent) >= 0);
 
-        const heartRates = this.sensorData.map(d => Number(d.avgHeartRate));
-        const mobilities = this.sensorData.map(d => Number(d.motionPercent));
-
-        // Heart rate chart
         this.heartRateChartData = {
-          labels,
+          labels: heartRateData.map(d =>
+            d.timestamp.toLocaleString([], { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+          ),
           datasets: [
             {
               label: "Heart Rate (bpm)",
               backgroundColor: "rgba(255, 99, 132, 0.2)",
               borderColor: "rgba(255, 99, 132, 1)",
               pointBackgroundColor: "rgba(255, 99, 132, 1)",
-              data: heartRates
+              data: heartRateData.map(d => Number(d.avgHeartRate))
             }
           ]
         };
 
         // Mobility chart
         this.mobilityChartData = {
-          labels,
+          labels: mobilityData.map(d =>
+            d.timestamp.toLocaleString([], { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+          ),
           datasets: [
             {
               label: "Average Mobility (%)",
               backgroundColor: "rgba(54, 162, 235, 0.2)",
               borderColor: "rgba(54, 162, 235, 1)",
               pointBackgroundColor: "rgba(54, 162, 235, 1)",
-              data: mobilities
+              data: mobilityData.map(d => Number(d.motionPercent))
             }
           ]
         };
+
+        const lastHeartRate = heartRateData[heartRateData.length - 1];
+        const lastMobility = mobilityData[mobilityData.length - 1];
+
+        this.recentData = {
+          avgHeartRate: lastHeartRate ? lastHeartRate.avgHeartRate : "",
+          motionPercent: lastMobility ? lastMobility.motionPercent : "",
+          timestamp: lastHeartRate ? lastHeartRate.timestamp.toISOString() : "",
+        };
+
 
       } catch (error) {
         console.error("Failed to fetch sensor data:", error);
@@ -291,8 +290,19 @@ export default {
 
       // Heart Rate
       let heartRateHIDComponent = 0
-      let heartRateRatio = this.averageData.avgHeartRate/this.patient.HIDRisk[0].heartRate
-      
+      let heartRateRatio
+
+      if(this.patient.HIDRisk[0].heartRate == 0) {
+        heartRateRatio = 0
+      } else {
+        heartRateRatio = this.averageData.avgHeartRate/this.patient.HIDRisk[0].heartRate
+      }
+
+
+      console.log("hr")
+      console.log(heartRateRatio)
+
+
       let averageMovementHIDComponent = 0
       
 
@@ -338,20 +348,38 @@ export default {
           return;
         }
 
-        // Calculate daily averages
-        let totalHeartRate = 0;
-        let totalMotion = 0;
+        // Filter valid readings
+        const validHeartRateData = this.sensorData.filter(d => Number(d.avgHeartRate) >= 0);
+        const validMotionData = this.sensorData.filter(d => Number(d.motionPercent) >= 0);
 
-        for (let i = 0; i < this.sensorData.length; i++) {
-          totalHeartRate += Number(this.sensorData[i].avgHeartRate || 0);
-          totalMotion += Number(this.sensorData[i].motionPercent || 0);
+       
+        let totalHeartRate = 0;
+        let heartRateCount = validHeartRateData.length;
+
+        let avgHeartRate = 0
+
+        if (heartRateCount > 0) {
+          for (let i = 0; i < heartRateCount; i++) {
+            totalHeartRate += Number(validHeartRateData[i].avgHeartRate);
+          }
+          avgHeartRate = totalHeartRate / heartRateCount;
+        } 
+
+        let totalMotion = 0;
+        let motionCount = validMotionData.length;
+
+        let avgMotion = 0
+
+        if (motionCount > 0) {
+          for (let i = 0; i < motionCount; i++) {
+            totalMotion += Number(validMotionData[i].motionPercent);
+          }
+          avgMotion = totalMotion / motionCount;
         }
 
-        const count = this.sensorData.length;
-       
 
-        this.averageData.avgHeartRate = (totalHeartRate / count).toFixed(2);
-        this.averageData.motionPercent = (totalMotion / count).toFixed(2);
+        this.averageData.avgHeartRate = avgHeartRate.toFixed(2);
+        this.averageData.motionPercent = avgMotion.toFixed(2);
 
         console.log("Sending HID data based on daily averages:", {
           heartRate: this.averageData.avgHeartRate,
